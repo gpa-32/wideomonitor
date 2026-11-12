@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wideodomofon – konfiguracja</title>
+<style>
+  :root { --bg:#10171c; --card:#1a242c; --line:#2c3a45; --text:#e6edf2; --muted:#93a4b1; --accent:#2e9e5b; --blue:#2f7fd1; --red:#c9453f; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--text); }
+  header { padding:18px 20px; border-bottom:1px solid var(--line); display:flex; flex-wrap:wrap; gap:8px; align-items:baseline; justify-content:space-between; }
+  h1 { font-size:22px; margin:0; }
+  main { max-width:860px; margin:0 auto; padding:16px; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-bottom:16px; }
+  h2 { font-size:17px; margin:0 0 12px; }
+  .row { display:grid; grid-template-columns:minmax(150px,260px) 1fr; gap:6px 14px; align-items:center; padding:7px 0; border-top:1px solid var(--line); }
+  .row:first-of-type { border-top:0; }
+  .row small { grid-column:2; color:var(--muted); }
+  label { color:var(--text); }
+  input[type=text], input[type=password], input[type=number], select { width:100%; padding:9px 10px; border-radius:8px; border:1px solid var(--line); background:#0f151a; color:var(--text); font:inherit; }
+  input[type=checkbox] { width:22px; height:22px; }
+  button { font:inherit; padding:10px 16px; border-radius:8px; border:0; color:#fff; background:var(--blue); cursor:pointer; }
+  button.ok { background:var(--accent); } button.warn { background:var(--red); } button.gray { background:#4a5a66; }
+  .actions { display:flex; flex-wrap:wrap; gap:10px; }
+  table { width:100%; border-collapse:collapse; }
+  td { padding:5px 0; border-top:1px solid var(--line); vertical-align:top; }
+  td:first-child { color:var(--muted); width:42%; }
+  pre { background:#0b1014; border:1px solid var(--line); border-radius:8px; padding:10px; max-height:340px; overflow:auto; font-size:12.5px; white-space:pre-wrap; word-break:break-word; }
+  #msg { position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:#000c; padding:10px 18px; border-radius:20px; display:none; }
+  .savebar { position:sticky; bottom:0; background:var(--bg); padding:12px 0; display:flex; gap:10px; }
+  @media (max-width:560px) { .row { grid-template-columns:1fr; } .row small { grid-column:1; } }
+</style>
+</head>
+<body>
+<header><h1>Wideodomofon</h1><span id="ver" style="color:var(--muted)"></span></header>
+<main>
+  <section>
+    <h2>Stan</h2>
+    <table id="status"></table>
+    <div class="actions" style="margin-top:12px">
+      <button class="ok" onclick="act('open')">Otwórz furtkę</button>
+      <button onclick="act('test_ui')">Test ekranu na tablecie</button>
+      <button class="gray" onclick="act('hangup')">Rozłącz</button>
+      <button class="gray" onclick="act('restart_sip')">Restart SIP</button>
+      <button class="warn" onclick="if(confirm('Zrestartować aplikację?'))act('restart_app')">Restart aplikacji</button>
+    </div>
+  </section>
+
+  <form id="form" onsubmit="save(event)"></form>
+
+  <section>
+    <h2>Dziennik zdarzeń</h2>
+    <pre id="log">…</pre>
+  </section>
+</main>
+<div id="msg"></div>
+
+<script>
+const GROUPS = [
+  ["Połączenia SIP", [
+    ["sip_port","number","Port SIP tabletu","Bramofon może dzwonić bezpośrednio na adres IP tabletu i ten port (bez serwera)."],
+    ["sip_enabled","bool","Rejestracja na serwerze SIP","Włącz, jeśli tablet ma być numerem wewnętrznym centrali / serwera SIP."],
+    ["sip_server","text","Serwer SIP","Adres lub adres:port, np. 192.168.1.10"],
+    ["sip_user","text","Użytkownik / numer",""],
+    ["sip_pass","password","Hasło SIP",""],
+    ["sip_transport","select:udp=UDP,tcp=TCP","Transport",""],
+    ["sip_expires","number","Odświeżanie rejestracji [s]",""]
+  ]],
+  ["Obraz z kamery", [
+    ["video_source","select:sip=Wideo w połączeniu SIP,rtsp=Strumień RTSP z bramofonu","Źródło obrazu","RTSP pokazuje obraz od pierwszej sekundy dzwonienia, niezależnie od połączenia."],
+    ["early_media","bool","Obraz SIP przed odebraniem","Działa, gdy bramofon wysyła wideo już podczas dzwonienia (early media)."],
+    ["rtsp_url","text","Adres RTSP","Akuvox: rtsp://IP_BRAMOFONU/live/ch00_0 (z hasłem: rtsp://uzytkownik:haslo@IP/live/ch00_0)"],
+    ["rtsp_tcp","bool","RTSP przez TCP","Zalecane w sieci Wi-Fi."]
+  ]],
+  ["Furtka", [
+    ["gate_mode","select:both=HTTP i DTMF,http=Tylko HTTP,dtmf=Tylko DTMF","Sposób otwierania",""],
+    ["http_url","text","Adres URL otwarcia","Akuvox: http://IP_BRAMOFONU/fcgi/OpenDoor?action=OpenDoor&DoorNum=1"],
+    ["http_user","text","Użytkownik HTTP","Jak w bramofonie: Access Control → Relay → Open Relay via HTTP."],
+    ["http_pass","password","Hasło HTTP",""],
+    ["dtmf_code","text","Kod DTMF","Akuvox domyślnie: #"],
+    ["dtmf_method","select:rfc2833=RFC2833,info=SIP INFO,both=RFC2833 + SIP INFO","Sposób wysyłania DTMF","Musi być taki sam jak w ustawieniach konta bramofonu."],
+    ["hangup_after_open_s","number","Rozłącz po otwarciu po [s]","0 = nie rozłączaj automatycznie. Po rozłączeniu wraca poprzednia aplikacja."]
+  ]],
+  ["Dźwięk i rozmowa", [
+    ["ring_enabled","bool","Dzwonek",""],
+    ["ring_volume","number","Głośność dzwonka [%]","-1 = nie zmieniaj głośności tabletu."],
+    ["call_volume","number","Głośność rozmowy [%]","-1 = nie zmieniaj."],
+    ["mic_gain_db","number","Wzmocnienie mikrofonu [dB]",""],
+    ["speaker_gain_db","number","Wzmocnienie głośnika [dB]",""],
+    ["echo_cancel","bool","Redukcja echa",""],
+    ["ring_timeout_s","number","Maks. czas dzwonienia [s]",""],
+    ["max_call_s","number","Maks. czas rozmowy [s]","Zabezpieczenie przed zawieszonym połączeniem. 0 = bez limitu."]
+  ]],
+  ["Zachowanie tabletu", [
+    ["restore_prev","bool","Przywracaj poprzednią aplikację",""],
+    ["screen_off_after","bool","Wygaś ekran po rozmowie","Tylko gdy ekran był wygaszony przed połączeniem (wymaga root)."],
+    ["nightly_restart_hour","number","Nocny restart aplikacji o godzinie","0–23, -1 = wyłączony."]
+  ]],
+  ["Panel www", [
+    ["web_port","number","Port panelu","Po zmianie panel będzie dostępny pod nowym portem."],
+    ["web_pass","text","Hasło panelu (login: admin)",""]
+  ]]
+];
+
+const $ = id => document.getElementById(id);
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function msg(t){ const m=$("msg"); m.textContent=t; m.style.display="block"; clearTimeout(msg.t); msg.t=setTimeout(()=>m.style.display="none",2500); }
+async function post(url, body){
+  const r = await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","X-Wideodomofon":"1"},body:JSON.stringify(body)});
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+function buildForm(cfg){
+  let h="";
+  for(const [title, fields] of GROUPS){
+    h+=`<section><h2>${esc(title)}</h2>`;
+    for(const [key,type,label,hint] of fields){
+      const v = cfg[key];
+      let input;
+      if(type==="bool") input=`<input type="checkbox" id="f_${key}" ${v?"checked":""}>`;
+      else if(type.startsWith("select:")){
+        input=`<select id="f_${key}">`+type.slice(7).split(",").map(o=>{const [val,txt]=o.split("=");return `<option value="${esc(val)}" ${v===val?"selected":""}>${esc(txt)}</option>`}).join("")+`</select>`;
+      } else input=`<input type="${type}" id="f_${key}" value="${esc(v??"")}" autocomplete="off">`;
+      h+=`<div class="row"><label for="f_${key}">${esc(label)}</label>${input}${hint?`<small>${esc(hint)}</small>`:""}</div>`;
+    }
+    h+=`</section>`;
+  }
+  h+=`<div class="savebar"><button class="ok" type="submit">Zapisz ustawienia</button></div>`;
+  $("form").innerHTML=h;
+}
+
+async function save(ev){
+  ev.preventDefault();
+  const out={};
+  for(const [,fields] of GROUPS) for(const [key,type] of fields){
+    const el=$("f_"+key);
+    out[key] = type==="bool" ? el.checked : type==="number" ? parseInt(el.value||"0",10) : el.value;
+  }
+  try { await post("/api/config",out); msg("Zapisano – ustawienia zastosowane"); }
+  catch(e){ msg("Błąd zapisu: "+e.message); }
+}
+
+async function act(name){
+  try { await post("/api/action",{name}); msg("Wysłano polecenie"); setTimeout(refresh,1200); }
+  catch(e){ msg("Błąd: "+e.message); }
+}
+
+function dur(s){ const d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60); return (d?d+" d ":"")+h+" h "+m+" min"; }
+async function refresh(){
+  try{
+    const s = await (await fetch("/api/status")).json();
+    $("ver").textContent="wersja "+s.version;
+    const rows=[["Stan",s.call_state],["SIP",s.sip],["Adres tabletu",s.ip],["Ostatnie połączenie",s.last_call],["Furtka",s.gate],
+      ["Root",s.root?"tak":"nie"],["Watchdog",s.watchdog],["Mikrofon",s.mic?"OK":"BRAK UPRAWNIENIA"],
+      ["Wyświetlanie nad aplikacjami",s.overlay?"OK":"BRAK UPRAWNIENIA"],["Czas pracy",dur(s.uptime_s)]];
+    $("status").innerHTML=rows.map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join("");
+    const log=$("log"); const atEnd=log.scrollTop+log.clientHeight>=log.scrollHeight-20;
+    log.textContent=await (await fetch("/api/log")).text();
+    if(atEnd) log.scrollTop=log.scrollHeight;
+  }catch(e){ $("status").innerHTML="<tr><td>Brak połączenia z tabletem</td><td></td></tr>"; }
+}
+
+(async()=>{ buildForm(await (await fetch("/api/config")).json()); refresh(); setInterval(refresh,4000); })();
+</script>
+</body>
+</html>

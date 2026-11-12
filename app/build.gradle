@@ -1,0 +1,63 @@
+plugins {
+    id 'com.android.application'
+}
+
+def runNumber = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInteger()
+
+android {
+    namespace 'pl.wideodomofon.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "pl.wideodomofon.app"
+        minSdk 26
+        // Celowo 29: bez ograniczen uslug pierwszoplanowych z Androida 12-14,
+        // aplikacja jest instalowana recznie na zrootowanym tablecie.
+        targetSdk 29
+        versionCode runNumber
+        versionName "1.0.${runNumber}"
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a'
+        }
+    }
+
+    signingConfigs {
+        release {
+            storeFile rootProject.file('keystore/release.jks')
+            storePassword 'wideodomofon'
+            keyAlias 'wideodomofon'
+            keyPassword 'wideodomofon'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+        debug {
+            signingConfig signingConfigs.release
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}
+
+dependencies {
+    implementation 'org.linphone:linphone-sdk-android:5.3.60'
+    implementation 'androidx.media3:media3-exoplayer:1.4.1'
+    implementation 'androidx.media3:media3-exoplayer-rtsp:1.4.1'
+    implementation 'org.nanohttpd:nanohttpd:2.3.1'
+}
