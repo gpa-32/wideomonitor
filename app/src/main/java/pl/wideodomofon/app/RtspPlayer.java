@@ -68,7 +68,9 @@ public class RtspPlayer {
         try {
             ArrayList<String> args = new ArrayList<>();
             args.add("-vv"); // szczegolowe komunikaty do diagnostyki w panelu www
-            args.add("--no-audio"); // dzwiek idzie przez SIP
+            // Uwaga: nie wolno wylaczac sciezki dzwieku (--no-audio). VLC wysyla wtedy TEARDOWN
+            // dla sciezki audio, a serwer RTSP Akuvoxa konczy po nim caly strumien (takze obraz).
+            // Dzwiek RTSP jest wiec odbierany, ale wyciszony - rozmowa idzie przez SIP.
             args.add("--network-caching=300");
             if (tcp) args.add("--rtsp-tcp");
             lib = new LibVLC(ctx, args);
@@ -78,7 +80,12 @@ public class RtspPlayer {
             player.setEventListener(event -> {
                 if (stopped) return;
                 switch (event.type) {
+                    case MediaPlayer.Event.Playing:
+                    case MediaPlayer.Event.ESAdded:
+                        mute();
+                        break;
                     case MediaPlayer.Event.Vout:
+                        mute();
                         if (event.getVoutCount() > 0 && !gotFrame) {
                             gotFrame = true;
                             main.removeCallbacks(timeout);
@@ -103,9 +110,17 @@ public class RtspPlayer {
             player.setMedia(media);
             media.release();
             player.play();
+            mute();
             main.postDelayed(timeout, 12000);
         } catch (Throwable t) {
             fail("nie udało się uruchomić odtwarzacza: " + t);
+        }
+    }
+
+    private void mute() {
+        try {
+            if (player != null) player.setVolume(0);
+        } catch (Throwable ignored) {
         }
     }
 
