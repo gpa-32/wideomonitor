@@ -29,6 +29,8 @@ public class CallActivity extends Activity implements IntercomService.Ui {
     private VLCVideoLayout rtspView;
     private TextView title, info, videoStatus, btnAnswer, btnOpen, btnHang, btnMute;
     private RtspPlayer rtsp;
+    private SnapshotPlayer jpeg;
+    private android.widget.ImageView jpegView;
     private boolean test;
     private boolean sipVideoAttached;
     private boolean closed;
@@ -79,24 +81,33 @@ public class CallActivity extends Activity implements IntercomService.Ui {
 
     private void startVideo(IntercomService svc) {
         String url = Cfg.s("rtsp_url");
+        final RtspPlayer.Listener statusListener = msg -> {
+            if (closed) return;
+            videoStatus.setText(msg == null ? "" : msg);
+            videoStatus.setVisibility(msg == null ? View.GONE : View.VISIBLE);
+        };
+        if ("jpeg".equals(Cfg.s("video_source")) && !Cfg.s("jpeg_url").isEmpty()) {
+            L.i("Ekran: podglad JPEG");
+            video.setVisibility(View.GONE);
+            jpegView.setVisibility(View.VISIBLE);
+            jpeg = new SnapshotPlayer();
+            jpeg.start(jpegView, Cfg.s("jpeg_url"), statusListener);
+            return;
+        }
         if ("rtsp".equals(Cfg.s("video_source")) && !url.isEmpty()) {
             rtsp = new RtspPlayer();
             L.i("Ekran: podglad RTSP");
             video.setVisibility(View.GONE);
             rtspView.setVisibility(View.VISIBLE);
-            rtsp.start(this, rtspView, url, Cfg.b("rtsp_tcp"), msg -> {
-                if (closed) return;
-                videoStatus.setText(msg == null ? "" : msg);
-                videoStatus.setVisibility(msg == null ? View.GONE : View.VISIBLE);
-            });
+            rtsp.start(this, rtspView, url, Cfg.b("rtsp_tcp"), statusListener);
         } else if (svc.sip() != null) {
             L.i("Ekran: obraz z polaczenia SIP (zrodlo: " + Cfg.s("video_source")
                     + (url.isEmpty() ? ", adres RTSP pusty" : "") + ")");
             svc.sip().setVideoWindow(video);
             sipVideoAttached = true;
             if (test) {
-                videoStatus.setText("rtsp".equals(Cfg.s("video_source"))
-                        ? "Nie wpisano adresu RTSP w panelu www."
+                videoStatus.setText(!"sip".equals(Cfg.s("video_source"))
+                        ? "Nie wpisano adresu kamery (RTSP / JPEG) w panelu www."
                         : "Źródło obrazu ustawione na „Wideo w połączeniu SIP” –\nobraz pojawi się tylko podczas prawdziwego połączenia.\n"
                         + "Aby zobaczyć podgląd tutaj, wybierz w panelu www „Strumień RTSP z bramofonu” i zapisz.");
                 videoStatus.setVisibility(View.VISIBLE);
@@ -166,6 +177,8 @@ public class CallActivity extends Activity implements IntercomService.Ui {
         try {
             if (rtsp != null) rtsp.stop();
             rtsp = null;
+            if (jpeg != null) jpeg.stop();
+            jpeg = null;
             IntercomService svc = IntercomService.instance;
             if (sipVideoAttached && svc != null && svc.sip() != null) svc.sip().setVideoWindow(null);
             sipVideoAttached = false;
@@ -287,6 +300,12 @@ public class CallActivity extends Activity implements IntercomService.Ui {
         rtspView = new VLCVideoLayout(this);
         rtspView.setVisibility(View.GONE);
         root.addView(rtspView, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+
+        jpegView = new android.widget.ImageView(this);
+        jpegView.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+        jpegView.setVisibility(View.GONE);
+        root.addView(jpegView, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
 
         video = new TextureView(this);

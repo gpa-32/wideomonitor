@@ -40,10 +40,12 @@
     <div class="actions" style="margin-top:12px">
       <button class="ok" onclick="act('open')">Otwórz furtkę</button>
       <button onclick="act('test_ui')">Test ekranu na tablecie</button>
+      <button onclick="diag()">Diagnostyka kamery</button>
       <button class="gray" onclick="act('hangup')">Rozłącz</button>
       <button class="gray" onclick="act('restart_sip')">Restart SIP</button>
       <button class="warn" onclick="if(confirm('Zrestartować aplikację?'))act('restart_app')">Restart aplikacji</button>
     </div>
+    <pre id="diag" style="display:none;margin-top:12px"></pre>
   </section>
 
   <form id="form" onsubmit="save(event)"></form>
@@ -67,10 +69,11 @@ const GROUPS = [
     ["sip_expires","number","Odświeżanie rejestracji [s]",""]
   ]],
   ["Obraz z kamery", [
-    ["video_source","select:sip=Wideo w połączeniu SIP,rtsp=Strumień RTSP z bramofonu","Źródło obrazu","RTSP pokazuje obraz od pierwszej sekundy dzwonienia, niezależnie od połączenia."],
+    ["video_source","select:sip=Wideo w połączeniu SIP,rtsp=Strumień RTSP z bramofonu,jpeg=Zdjęcia JPEG z bramofonu (zapasowe)","Źródło obrazu","RTSP pokazuje obraz od pierwszej sekundy dzwonienia. JPEG to prostszy, zapasowy podgląd (kilka klatek na sekundę)."],
     ["early_media","bool","Obraz SIP przed odebraniem","Działa, gdy bramofon wysyła wideo już podczas dzwonienia (early media)."],
     ["rtsp_url","text","Adres RTSP","Akuvox: rtsp://IP_BRAMOFONU/live/ch00_0 (z hasłem: rtsp://uzytkownik:haslo@IP/live/ch00_0)"],
-    ["rtsp_tcp","bool","RTSP przez TCP","Zalecane w sieci Wi-Fi."]
+    ["rtsp_tcp","bool","RTSP przez TCP","Zalecane w sieci Wi-Fi."],
+    ["jpeg_url","text","Adres zdjęcia JPEG","Akuvox: http://IP_BRAMOFONU:8080/picture.jpg (w bramofonie trzeba włączyć MJPEG / Live Stream)."]
   ]],
   ["Furtka", [
     ["gate_mode","select:both=HTTP i DTMF,http=Tylko HTTP,dtmf=Tylko DTMF","Sposób otwierania",""],
@@ -146,6 +149,10 @@ async function act(name){
   catch(e){ msg("Błąd: "+e.message); }
 }
 
+async function diag(){
+  const d=$("diag"); d.style.display="block"; d.textContent="Sprawdzam połączenie tabletu z kamerą… (do 30 s)";
+  try { d.textContent=await (await fetch("/api/diag")).text(); } catch(e){ d.textContent="Błąd: "+e.message; }
+}
 function dur(s){ const d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60); return (d?d+" d ":"")+h+" h "+m+" min"; }
 async function refresh(){
   try{

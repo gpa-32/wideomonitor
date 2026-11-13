@@ -65,10 +65,9 @@ public class RtspPlayer {
         status("Łączenie z kamerą… (" + mode + ", próba " + attempt + ")");
         try {
             ArrayList<String> args = new ArrayList<>();
+            args.add("-vv"); // szczegolowe komunikaty do diagnostyki w panelu www
             args.add("--no-audio"); // dzwiek idzie przez SIP
             args.add("--network-caching=300");
-            args.add("--drop-late-frames");
-            args.add("--skip-frames");
             if (tcp) args.add("--rtsp-tcp");
             lib = new LibVLC(ctx, args);
             player = new MediaPlayer(lib);
@@ -119,7 +118,7 @@ public class RtspPlayer {
             release();
             tcp = !tcp; // nastepna proba drugim sposobem transmisji
             main.removeCallbacks(openRunnable);
-            main.postDelayed(openRunnable, 2500);
+            main.postDelayed(openRunnable, 4000);
         });
     }
 

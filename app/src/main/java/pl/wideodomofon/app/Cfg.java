@@ -27,10 +27,11 @@ public final class Cfg {
             d.put("sip_transport", "udp");      // udp | tcp
             d.put("sip_expires", 300);
             // Obraz
-            d.put("video_source", "sip");       // sip | rtsp
+            d.put("video_source", "sip");       // sip | rtsp | jpeg
             d.put("early_media", true);         // obraz SIP przed odebraniem
             d.put("rtsp_url", "");
             d.put("rtsp_tcp", true);
+            d.put("jpeg_url", "");
             // Furtka
             d.put("gate_mode", "both");         // dtmf | http | both
             d.put("dtmf_code", "#");

@@ -46,6 +46,9 @@ public class WebServer extends NanoHTTPD {
                 }
                 if ("/api/config".equals(uri)) return json(Cfg.all());
                 if ("/api/status".equals(uri)) return json(status());
+                if ("/api/diag".equals(uri)) {
+                    return newFixedLengthResponse(Response.Status.OK, "text/plain; charset=utf-8", Diag.camera());
+                }
                 if ("/api/log".equals(uri)) {
                     return newFixedLengthResponse(Response.Status.OK, "text/plain; charset=utf-8", L.dump());
                 }
