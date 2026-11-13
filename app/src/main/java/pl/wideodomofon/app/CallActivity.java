@@ -24,7 +24,7 @@ public class CallActivity extends Activity implements IntercomService.Ui {
     private final Handler main = new Handler(Looper.getMainLooper());
     private FrameLayout root;
     private TextureView video;
-    private TextView title, info, btnAnswer, btnOpen, btnHang, btnMute;
+    private TextView title, info, videoStatus, btnAnswer, btnOpen, btnHang, btnMute;
     private RtspPlayer rtsp;
     private boolean test;
     private boolean sipVideoAttached;
@@ -78,10 +78,32 @@ public class CallActivity extends Activity implements IntercomService.Ui {
         String url = Cfg.s("rtsp_url");
         if ("rtsp".equals(Cfg.s("video_source")) && !url.isEmpty()) {
             rtsp = new RtspPlayer();
-            rtsp.start(this, video, url, Cfg.b("rtsp_tcp"), this::fitVideo);
+            L.i("Ekran: podglad RTSP");
+            rtsp.start(this, video, url, Cfg.b("rtsp_tcp"), new RtspPlayer.Listener() {
+                @Override
+                public void onVideoSize(int w, int h) {
+                    fitVideo(w, h);
+                }
+
+                @Override
+                public void onStatus(String msg) {
+                    if (closed) return;
+                    videoStatus.setText(msg == null ? "" : msg);
+                    videoStatus.setVisibility(msg == null ? View.GONE : View.VISIBLE);
+                }
+            });
         } else if (svc.sip() != null) {
+            L.i("Ekran: obraz z polaczenia SIP (zrodlo: " + Cfg.s("video_source")
+                    + (url.isEmpty() ? ", adres RTSP pusty" : "") + ")");
             svc.sip().setVideoWindow(video);
             sipVideoAttached = true;
+            if (test) {
+                videoStatus.setText("rtsp".equals(Cfg.s("video_source"))
+                        ? "Nie wpisano adresu RTSP w panelu www."
+                        : "Źródło obrazu ustawione na „Wideo w połączeniu SIP” –\nobraz pojawi się tylko podczas prawdziwego połączenia.\n"
+                        + "Aby zobaczyć podgląd tutaj, wybierz w panelu www „Strumień RTSP z bramofonu” i zapisz.");
+                videoStatus.setVisibility(View.VISIBLE);
+            }
         }
     }
 
@@ -278,6 +300,15 @@ public class CallActivity extends Activity implements IntercomService.Ui {
         video = new TextureView(this);
         root.addView(video, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT, Gravity.CENTER));
+
+        videoStatus = new TextView(this);
+        videoStatus.setTextColor(0xFFFFD54F);
+        videoStatus.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
+        videoStatus.setGravity(Gravity.CENTER);
+        videoStatus.setPadding(dp(24), dp(24), dp(24), dp(24));
+        videoStatus.setVisibility(View.GONE);
+        root.addView(videoStatus, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
 
         LinearLayout top = new LinearLayout(this);
         top.setOrientation(LinearLayout.VERTICAL);
