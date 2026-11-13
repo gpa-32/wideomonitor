@@ -1,0 +1,54 @@
+# Test na emulatorze: 52/52 OK
+
+- PASS Instalacja APK
+- PASS Proces aplikacji dziala po starcie
+- PASS Usluga w tle uruchomiona (pierwszoplanowa)
+- PASS Wygenerowano losowe haslo panelu
+- PASS Panel odrzuca dostep bez hasla (401)
+- PASS Panel odpowiada po zalogowaniu
+- PASS Strona konfiguracji laduje sie
+- PASS Zapis bez naglowka ochronnego odrzucony (403)
+- PASS Zapis ustawien przez www
+- PASS Ustawienia zapamietane
+- PASS SIP dziala po zmianie ustawien
+- PASS RTSP: zapis adresu strumienia
+- PASS RTSP: ekran testowy otwarty
+- PASS RTSP: obraz z kamery odebrany i wyswietlony
+- PASS RTSP: po zamknieciu testu wraca poprzednia aplikacja
+- PASS Odrzucenie: poprzednia aplikacja (Ustawienia) na wierzchu
+- PASS Odrzucenie: tablet przyjal polaczenie i dzwoni
+- PASS Odrzucenie: ekran polaczenia wyskoczyl nad aplikacja
+- PASS Odrzucenie: stan 'dzwoni' z nazwa dzwoniacego
+- PASS Odrzucenie: bramofon dostal odmowe
+- PASS Odrzucenie: po zakonczeniu wrocila poprzednia aplikacja
+- PASS Rozmowa: poprzednia aplikacja (Ustawienia) na wierzchu
+- PASS Rozmowa: tablet przyjal polaczenie i dzwoni
+- PASS Rozmowa: ekran polaczenia wyskoczyl nad aplikacja
+- PASS Rozmowa: stan 'dzwoni' z nazwa dzwoniacego
+- PASS Rozmowa: polaczenie odebrane (200 OK)
+- PASS Rozmowa: stan 'rozmowa'
+- PASS Rozmowa: ekran polaczenia nadal na wierzchu
+- PASS Rozmowa: tablet rozlaczyl (BYE)
+- PASS Rozmowa: po zakonczeniu wrocila poprzednia aplikacja
+- PASS Furtka: poprzednia aplikacja (Ustawienia) na wierzchu
+- PASS Furtka: tablet przyjal polaczenie i dzwoni
+- PASS Furtka: ekran polaczenia wyskoczyl nad aplikacja
+- PASS Furtka: stan 'dzwoni' z nazwa dzwoniacego
+- PASS Furtka: przekaznik dostal zapytanie HTTP z poprawnym logowaniem
+- PASS Furtka: polaczenie zakonczone automatycznie po otwarciu
+- PASS Furtka: po zakonczeniu wrocila poprzednia aplikacja
+- PASS Furtka: wynik widoczny w panelu
+- PASS Rezygnacja: poprzednia aplikacja (Ustawienia) na wierzchu
+- PASS Rezygnacja: tablet przyjal polaczenie i dzwoni
+- PASS Rezygnacja: ekran polaczenia wyskoczyl nad aplikacja
+- PASS Rezygnacja: stan 'dzwoni' z nazwa dzwoniacego
+- PASS Rezygnacja: po zakonczeniu wrocila poprzednia aplikacja
+- PASS Po ubiciu procesu usluga wstaje sama
+- PASS Po restarcie: poprzednia aplikacja (Ustawienia) na wierzchu
+- PASS Po restarcie: tablet przyjal polaczenie i dzwoni
+- PASS Po restarcie: ekran polaczenia wyskoczyl nad aplikacja
+- PASS Po restarcie: stan 'dzwoni' z nazwa dzwoniacego
+- PASS Po restarcie: odrzucenie dziala
+- PASS Po restarcie: po zakonczeniu wrocila poprzednia aplikacja
+- PASS Brak awarii aplikacji w logach systemu
+- PASS Brak zawieszen (ANR) w logach systemu

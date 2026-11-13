@@ -1,0 +1,63 @@
+11-13 02:09:08 === Start procesu, wersja 1.0.9 ===
+11-13 02:09:08 Usluga: start
+11-13 02:09:09 SIP: uruchomiono, port 5060, bez rejestracji
+11-13 02:09:09 Panel www: http://10.0.2.16:8080
+11-13 02:09:09 Root: niedostepny (uprawnienia trzeba nadac recznie w aplikacji)
+11-13 02:09:25 Zapisano nowe ustawienia
+11-13 02:09:25 SIP: restart
+11-13 02:09:25 SIP: uruchomiono, port 5060, bez rejestracji
+11-13 02:09:31 Zapisano nowe ustawienia
+11-13 02:09:31 SIP: restart
+11-13 02:09:31 SIP: uruchomiono, port 5060, bez rejestracji
+11-13 02:09:37 Ekran: podglad RTSP
+11-13 02:09:37 RTSP: lacze z rtsp://10.0.2.2:8554/live/ch00_0 przez TCP (proba 1)
+11-13 02:09:38 RTSP: obraz odebrany (TCP)
+11-13 02:09:51 SIP: stan polaczenia IncomingReceived (Incoming call received)
+11-13 02:09:51 Polaczenie przychodzace: Furtka test
+11-13 02:09:51 Ekran: podglad RTSP
+11-13 02:09:51 RTSP: lacze z rtsp://10.0.2.2:8554/live/ch00_0 przez TCP (proba 1)
+11-13 02:09:52 RTSP: obraz odebrany (TCP)
+11-13 02:09:55 SIP: stan polaczenia End (Call terminated)
+11-13 02:09:55 Polaczenie zakonczone: Call terminated
+11-13 02:09:55 SIP: stan polaczenia Released (Call released)
+11-13 02:10:00 SIP: stan polaczenia IncomingReceived (Incoming call received)
+11-13 02:10:00 Polaczenie przychodzace: Furtka test
+11-13 02:10:00 Ekran: podglad RTSP
+11-13 02:10:00 RTSP: lacze z rtsp://10.0.2.2:8554/live/ch00_0 przez TCP (proba 1)
+11-13 02:10:01 SIP: stan polaczenia Connected (Connected)
+11-13 02:10:01 SIP: stan polaczenia StreamsRunning (Connected (streams running))
+11-13 02:10:01 Rozmowa rozpoczeta
+11-13 02:10:02 RTSP: obraz odebrany (TCP)
+11-13 02:10:07 SIP: stan polaczenia End (Call terminated)
+11-13 02:10:07 Polaczenie zakonczone: Call terminated
+11-13 02:10:07 SIP: stan polaczenia Released (Call released)
+11-13 02:10:12 SIP: stan polaczenia IncomingReceived (Incoming call received)
+11-13 02:10:12 Polaczenie przychodzace: Furtka test
+11-13 02:10:12 Ekran: podglad RTSP
+11-13 02:10:12 RTSP: lacze z rtsp://10.0.2.2:8554/live/ch00_0 przez TCP (proba 1)
+11-13 02:10:13 Otwieranie furtki (panel www), tryb http
+11-13 02:10:13 RTSP: obraz odebrany (TCP)
+11-13 02:10:13 Furtka otwarta (HTTP 200 OK relay opened)
+11-13 02:10:16 SIP: stan polaczenia End (Call terminated)
+11-13 02:10:16 Polaczenie zakonczone: Call terminated
+11-13 02:10:16 SIP: stan polaczenia Released (Call released)
+11-13 02:10:21 SIP: stan polaczenia IncomingReceived (Incoming call received)
+11-13 02:10:21 Polaczenie przychodzace: Furtka test
+11-13 02:10:21 Ekran: podglad RTSP
+11-13 02:10:21 RTSP: lacze z rtsp://10.0.2.2:8554/live/ch00_0 przez TCP (proba 1)
+11-13 02:10:21 SIP: stan polaczenia End (Call ended)
+11-13 02:10:21 Polaczenie zakonczone: Call ended
+11-13 02:10:22 SIP: stan polaczenia Released (Call released)
+11-13 02:10:25 === Start procesu, wersja 1.0.9 ===
+11-13 02:10:25 Usluga: start
+11-13 02:10:25 SIP: uruchomiono, port 5060, bez rejestracji
+11-13 02:10:25 Panel www: http://10.0.2.16:8080
+11-13 02:10:25 Root: niedostepny (uprawnienia trzeba nadac recznie w aplikacji)
+11-13 02:10:34 SIP: stan polaczenia IncomingReceived (Incoming call received)
+11-13 02:10:34 Polaczenie przychodzace: Furtka test
+11-13 02:10:34 Ekran: podglad RTSP
+11-13 02:10:34 RTSP: lacze z rtsp://10.0.2.2:8554/live/ch00_0 przez TCP (proba 1)
+11-13 02:10:36 RTSP: obraz odebrany (TCP)
+11-13 02:10:38 SIP: stan polaczenia End (Call terminated)
+11-13 02:10:38 Polaczenie zakonczone: Call terminated
+11-13 02:10:39 SIP: stan polaczenia Released (Call released)
