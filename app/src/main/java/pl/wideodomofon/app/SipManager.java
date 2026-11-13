@@ -177,7 +177,7 @@ public class SipManager {
 
             accountConfigured = false;
             regOk = false;
-            regState = "wylaczona (tylko polaczenia po IP)";
+            regState = "bez rejestracji (tylko połączenia po IP)";
             String server = Cfg.s("sip_server");
             String user = Cfg.s("sip_user");
             if (Cfg.b("sip_enabled") && !server.isEmpty() && !user.isEmpty()) {
@@ -199,7 +199,7 @@ public class SipManager {
                     c.addAccount(acc);
                     c.setDefaultAccount(acc);
                     accountConfigured = true;
-                    regState = "laczenie...";
+                    regState = "łączenie…";
                 }
             }
 

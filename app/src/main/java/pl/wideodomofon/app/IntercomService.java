@@ -239,7 +239,7 @@ public class IntercomService extends Service implements SipManager.Events {
             Root.resetCache();
             if (!Root.available()) {
                 rootOk = false;
-                watchdogInfo = "brak root - dziala tylko watchdog wewnetrzny";
+                watchdogInfo = "brak root – działa tylko watchdog wewnętrzny";
                 L.i("Root: niedostepny (uprawnienia trzeba nadac recznie w aplikacji)");
                 return;
             }
@@ -281,10 +281,10 @@ public class IntercomService extends Service implements SipManager.Events {
                         + " if [ -n \"$OP\" ] && grep -q " + WD_SCRIPT + " /proc/$OP/cmdline 2>/dev/null; then kill $OP; fi;"
                         + " nohup sh " + path + " >/dev/null 2>&1 &"
                         + " echo $! > " + WD_PID + "; echo ok", 10000);
-                watchdogInfo = r.out.contains("ok") ? "zewnetrzny (root) + wewnetrzny" : "wewnetrzny (blad startu zewnetrznego)";
+                watchdogInfo = r.out.contains("ok") ? "zewnętrzny (root) + wewnętrzny" : "wewnętrzny (błąd startu zewnętrznego)";
                 L.i("Watchdog: " + watchdogInfo);
             } catch (Throwable e) {
-                watchdogInfo = "wewnetrzny";
+                watchdogInfo = "wewnętrzny";
                 L.e("Watchdog zewnetrzny", e);
             }
         }, "root-setup");
@@ -527,23 +527,28 @@ public class IntercomService extends Service implements SipManager.Events {
         } catch (Throwable t) {
             L.e("Start ekranu rozmowy", t);
         }
+        // Powiadomienie pelnoekranowe tylko jako rezerwa, gdy ekran rozmowy sam sie nie pojawil
+        // (inaczej baner powiadomienia zaslanialby obraz z kamery).
         if (!test) {
-            try {
-                PendingIntent pi = PendingIntent.getActivity(this, 2, i,
-                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-                Notification n = new Notification.Builder(this, CH_CALL)
-                        .setSmallIcon(android.R.drawable.sym_call_incoming)
-                        .setContentTitle("Ktoś dzwoni do furtki")
-                        .setContentText(caller)
-                        .setCategory(Notification.CATEGORY_CALL)
-                        .setOngoing(true)
-                        .setContentIntent(pi)
-                        .setFullScreenIntent(pi, true)
-                        .build();
-                ((NotificationManager) getSystemService(NOTIFICATION_SERVICE)).notify(NOTIF_CALL, n);
-            } catch (Throwable t) {
-                L.e("Powiadomienie o polaczeniu", t);
-            }
+            main.postDelayed(() -> {
+                if (CallActivity.shown || state == IDLE) return;
+                try {
+                    PendingIntent pi = PendingIntent.getActivity(this, 2, i,
+                            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                    Notification n = new Notification.Builder(this, CH_CALL)
+                            .setSmallIcon(android.R.drawable.sym_call_incoming)
+                            .setContentTitle("Ktoś dzwoni do furtki")
+                            .setContentText(caller)
+                            .setCategory(Notification.CATEGORY_CALL)
+                            .setOngoing(true)
+                            .setContentIntent(pi)
+                            .setFullScreenIntent(pi, true)
+                            .build();
+                    ((NotificationManager) getSystemService(NOTIFICATION_SERVICE)).notify(NOTIF_CALL, n);
+                } catch (Throwable t) {
+                    L.e("Powiadomienie o polaczeniu", t);
+                }
+            }, 1200);
         }
         // Rezerwa: jesli system zablokowal start ekranu z tla, wymus go przez root.
         main.postDelayed(() -> {
@@ -553,6 +558,14 @@ public class IntercomService extends Service implements SipManager.Events {
                         + " -f 0x10040000");
             }
         }, 2000);
+    }
+
+    /** Wolane przez CallActivity, gdy ekran rozmowy jest juz widoczny. */
+    public void cancelCallNotification() {
+        try {
+            ((NotificationManager) getSystemService(NOTIFICATION_SERVICE)).cancel(NOTIF_CALL);
+        } catch (Throwable ignored) {
+        }
     }
 
     /** Zamyka ekran rozmowy i przywraca to, co bylo na ekranie wczesniej. */

@@ -169,6 +169,8 @@ public class CallActivity extends Activity implements IntercomService.Ui {
         super.onResume();
         shown = true;
         hideSystemBars();
+        IntercomService svc = IntercomService.instance;
+        if (svc != null) svc.cancelCallNotification();
     }
 
     @Override
