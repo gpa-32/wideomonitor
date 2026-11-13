@@ -28,6 +28,7 @@ public class RtspPlayer {
     private MediaPlayer player;
     private boolean stopped;
     private boolean gotFrame;
+    private boolean workingFound;
     private boolean tcp;
     private int attempt;
     private Context ctx;
@@ -42,6 +43,7 @@ public class RtspPlayer {
         this.listener = listener;
         this.tcp = tcpPreferred;
         this.attempt = 0;
+        this.workingFound = false;
         this.stopped = false;
         open();
     }
@@ -62,7 +64,7 @@ public class RtspPlayer {
         gotFrame = false;
         final String mode = tcp ? "TCP" : "UDP";
         L.i("RTSP: lacze z " + url.replaceAll("//[^/@]*@", "//***@") + " przez " + mode + " (proba " + attempt + ")");
-        status("Łączenie z kamerą… (" + mode + ", próba " + attempt + ")");
+        if (!workingFound) status("Łączenie z kamerą… (" + mode + ", próba " + attempt + ")");
         try {
             ArrayList<String> args = new ArrayList<>();
             args.add("-vv"); // szczegolowe komunikaty do diagnostyki w panelu www
@@ -111,14 +113,22 @@ public class RtspPlayer {
     private void fail(final String why) {
         if (stopped) return;
         main.removeCallbacks(timeout);
+        final boolean hadFrame = gotFrame;
         main.post(() -> {
             if (stopped) return;
-            L.i("RTSP: BLAD - " + why);
-            status("Brak obrazu z kamery:\n" + why);
             release();
-            tcp = !tcp; // nastepna proba drugim sposobem transmisji
             main.removeCallbacks(openRunnable);
-            main.postDelayed(openRunnable, 4000);
+            if (hadFrame) {
+                // Ten sposob transmisji dziala - wznawiamy od razu tym samym, bez komunikatu o bledzie.
+                L.i("RTSP: przerwa w strumieniu (" + why + ") - wznawiam tym samym sposobem");
+                workingFound = true;
+                main.postDelayed(openRunnable, 200);
+            } else {
+                L.i("RTSP: BLAD - " + why);
+                status("Brak obrazu z kamery:\n" + why);
+                if (!workingFound) tcp = !tcp; // szukamy dzialajacego sposobu transmisji
+                main.postDelayed(openRunnable, workingFound ? 1500 : 4000);
+            }
         });
     }
 
