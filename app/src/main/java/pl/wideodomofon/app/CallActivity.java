@@ -17,6 +17,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.videolan.libvlc.util.VLCVideoLayout;
+
 /** Pelnoekranowy ekran polaczenia: obraz z kamery + Odbierz / Otworz furtke / Odrzuc. */
 public class CallActivity extends Activity implements IntercomService.Ui {
     public static volatile boolean shown;
@@ -24,6 +26,7 @@ public class CallActivity extends Activity implements IntercomService.Ui {
     private final Handler main = new Handler(Looper.getMainLooper());
     private FrameLayout root;
     private TextureView video;
+    private VLCVideoLayout rtspView;
     private TextView title, info, videoStatus, btnAnswer, btnOpen, btnHang, btnMute;
     private RtspPlayer rtsp;
     private boolean test;
@@ -79,18 +82,12 @@ public class CallActivity extends Activity implements IntercomService.Ui {
         if ("rtsp".equals(Cfg.s("video_source")) && !url.isEmpty()) {
             rtsp = new RtspPlayer();
             L.i("Ekran: podglad RTSP");
-            rtsp.start(this, video, url, Cfg.b("rtsp_tcp"), new RtspPlayer.Listener() {
-                @Override
-                public void onVideoSize(int w, int h) {
-                    fitVideo(w, h);
-                }
-
-                @Override
-                public void onStatus(String msg) {
-                    if (closed) return;
-                    videoStatus.setText(msg == null ? "" : msg);
-                    videoStatus.setVisibility(msg == null ? View.GONE : View.VISIBLE);
-                }
+            video.setVisibility(View.GONE);
+            rtspView.setVisibility(View.VISIBLE);
+            rtsp.start(this, rtspView, url, Cfg.b("rtsp_tcp"), msg -> {
+                if (closed) return;
+                videoStatus.setText(msg == null ? "" : msg);
+                videoStatus.setVisibility(msg == null ? View.GONE : View.VISIBLE);
             });
         } else if (svc.sip() != null) {
             L.i("Ekran: obraz z polaczenia SIP (zrodlo: " + Cfg.s("video_source")
@@ -105,16 +102,6 @@ public class CallActivity extends Activity implements IntercomService.Ui {
                 videoStatus.setVisibility(View.VISIBLE);
             }
         }
-    }
-
-    /** Dopasowanie proporcji obrazu RTSP do ekranu. */
-    private void fitVideo(int w, int h) {
-        int rw = root.getWidth(), rh = root.getHeight();
-        if (rw == 0 || rh == 0 || w == 0 || h == 0) return;
-        float scale = Math.min(rw / (float) w, rh / (float) h);
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
-                Math.round(w * scale), Math.round(h * scale), Gravity.CENTER);
-        video.setLayoutParams(lp);
     }
 
     // ------------------------------------------------------------------ IntercomService.Ui
@@ -296,6 +283,11 @@ public class CallActivity extends Activity implements IntercomService.Ui {
     private void buildUi() {
         root = new FrameLayout(this);
         root.setBackgroundColor(Color.BLACK);
+
+        rtspView = new VLCVideoLayout(this);
+        rtspView.setVisibility(View.GONE);
+        root.addView(rtspView, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
 
         video = new TextureView(this);
         root.addView(video, new FrameLayout.LayoutParams(

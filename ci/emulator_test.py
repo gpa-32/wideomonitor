@@ -402,6 +402,25 @@ def test_web():
     log("status: " + json.dumps(st, ensure_ascii=False))
 
 
+def test_rtsp():
+    log("=== Podglad RTSP na ekranie testowym ===")
+    code, body = api("/api/config", body={"video_source": "rtsp", "rtsp_tcp": True,
+                                           "rtsp_url": "rtsp://%s:8554/live/ch00_0" % HOST_FROM_EMU})
+    check("RTSP: zapis adresu strumienia", code == 200, body[:100])
+    time.sleep(5)
+    open_previous_app()
+    api("/api/action", body={"name": "test_ui"})
+    check("RTSP: ekran testowy otwarty", wait_for(is_call_screen, 15), resumed())
+    ok = wait_for(lambda: "RTSP: obraz odebrany" in api("/api/log")[1], 45, step=2)
+    rtsp_lines = [ln for ln in api("/api/log")[1].splitlines() if "RTSP" in ln]
+    check("RTSP: obraz z kamery odebrany i wyswietlony", ok, " | ".join(rtsp_lines[-4:]))
+    time.sleep(2)
+    screenshot("01b-podglad-rtsp")
+    shell("input keyevent 4")  # Wstecz zamyka ekran testowy
+    check("RTSP: po zamknieciu testu wraca poprzednia aplikacja", wait_for(is_settings, 15), resumed())
+    time.sleep(2)
+
+
 def ring(door, label):
     """Wspolny poczatek: poprzednia aplikacja na wierzchu, dzwonimy, sprawdzamy ekran."""
     check(label + ": poprzednia aplikacja (Ustawienia) na wierzchu", open_previous_app(), resumed())
@@ -518,7 +537,7 @@ def main():
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     door = Doorphone()
 
-    steps = [test_start, test_web, lambda: test_reject(door), lambda: test_answer(door),
+    steps = [test_start, test_web, test_rtsp, lambda: test_reject(door), lambda: test_answer(door),
              lambda: test_gate(door), lambda: test_caller_hangup(door), lambda: test_recovery(door)]
     for s in steps:
         try:

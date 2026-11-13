@@ -27,6 +27,17 @@ jobs:
       - name: Budowanie APK z bibliotekami dla emulatora (x86_64)
         run: gradle --no-daemon assembleRelease -PextraAbi=x86_64
 
+      - name: Serwer RTSP z obrazem testowym (udaje kamere bramofonu)
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          curl -sSL -o mtx.tgz https://github.com/bluenviron/mediamtx/releases/download/v1.9.3/mediamtx_v1.9.3_linux_amd64.tar.gz
+          mkdir mtx && tar -xzf mtx.tgz -C mtx
+          (cd mtx && nohup ./mediamtx > ../mediamtx.log 2>&1 &)
+          sleep 3
+          nohup ffmpeg -loglevel error -re -f lavfi -i testsrc=size=1280x720:rate=15 -c:v libx264 -preset ultrafast -tune zerolatency -pix_fmt yuv420p -g 15 -f rtsp -rtsp_transport tcp rtsp://127.0.0.1:8554/live/ch00_0 > ffmpeg.log 2>&1 &
+          sleep 3
+          cat mediamtx.log | tail -5
+
       - name: Wlaczenie KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules

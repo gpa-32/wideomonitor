@@ -4,41 +4,39 @@ import android.content.Context;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
-import android.view.TextureView;
 
-import androidx.media3.common.MediaItem;
-import androidx.media3.common.PlaybackException;
-import androidx.media3.common.Player;
-import androidx.media3.common.VideoSize;
-import androidx.media3.exoplayer.DefaultLoadControl;
-import androidx.media3.exoplayer.ExoPlayer;
-import androidx.media3.exoplayer.rtsp.RtspMediaSource;
+import org.videolan.libvlc.LibVLC;
+import org.videolan.libvlc.Media;
+import org.videolan.libvlc.MediaPlayer;
+import org.videolan.libvlc.util.VLCVideoLayout;
+
+import java.util.ArrayList;
 
 /**
- * Podglad kamery bramofonu przez RTSP. Przy bledzie lub braku obrazu ponawia
- * polaczenie, na zmiane przez TCP i UDP, i zglasza przyczyne na ekran oraz do dziennika.
+ * Podglad kamery bramofonu przez RTSP na silniku VLC (libVLC).
+ * Przy bledzie lub braku obrazu ponawia polaczenie, na zmiane przez TCP i UDP,
+ * i zglasza stan na ekran oraz do dziennika.
  */
 public class RtspPlayer {
     public interface Listener {
-        void onVideoSize(int w, int h);
-
         /** Komunikat do pokazania na ekranie; null = obraz jest, ukryj komunikat. */
         void onStatus(String msg);
     }
 
     private final Handler main = new Handler(Looper.getMainLooper());
-    private ExoPlayer player;
+    private LibVLC lib;
+    private MediaPlayer player;
     private boolean stopped;
     private boolean gotFrame;
     private boolean tcp;
     private int attempt;
     private Context ctx;
-    private TextureView view;
+    private VLCVideoLayout view;
     private String url;
     private Listener listener;
 
-    public void start(Context ctx, TextureView view, String url, boolean tcpPreferred, Listener listener) {
-        this.ctx = ctx;
+    public void start(Context ctx, VLCVideoLayout view, String url, boolean tcpPreferred, Listener listener) {
+        this.ctx = ctx.getApplicationContext();
         this.view = view;
         this.url = url;
         this.listener = listener;
@@ -51,7 +49,7 @@ public class RtspPlayer {
     private final Runnable openRunnable = this::open;
 
     private final Runnable timeout = () -> {
-        if (!gotFrame) fail("brak obrazu przez 10 s (sprawdź sieć między tabletem a bramofonem)");
+        if (!gotFrame) fail("brak obrazu przez 12 s (sprawdź adres, hasło RTSP i sieć)");
     };
 
     private void status(String msg) {
@@ -62,73 +60,88 @@ public class RtspPlayer {
         if (stopped) return;
         attempt++;
         gotFrame = false;
-        String mode = tcp ? "TCP" : "UDP";
+        final String mode = tcp ? "TCP" : "UDP";
         L.i("RTSP: lacze z " + url.replaceAll("//[^/@]*@", "//***@") + " przez " + mode + " (proba " + attempt + ")");
         status("Łączenie z kamerą… (" + mode + ", próba " + attempt + ")");
         try {
-            DefaultLoadControl lc = new DefaultLoadControl.Builder()
-                    .setBufferDurationsMs(400, 2000, 100, 200)
-                    .build();
-            player = new ExoPlayer.Builder(ctx).setLoadControl(lc).build();
-            player.setVideoTextureView(view);
-            player.setVolume(0f); // dzwiek idzie przez SIP
-            player.addListener(new Player.Listener() {
-                @Override
-                public void onPlayerError(PlaybackException error) {
-                    Throwable c = error.getCause();
-                    String why = error.getErrorCodeName();
-                    if (c != null) why += ": " + c.getClass().getSimpleName()
-                            + (c.getMessage() != null ? " " + c.getMessage() : "");
-                    fail(why);
-                }
-
-                @Override
-                public void onRenderedFirstFrame() {
-                    if (!gotFrame) {
-                        gotFrame = true;
-                        main.removeCallbacks(timeout);
-                        L.i("RTSP: obraz odebrany");
-                        status(null);
-                    }
-                }
-
-                @Override
-                public void onVideoSizeChanged(VideoSize size) {
-                    if (listener != null && size.width > 0 && size.height > 0) {
-                        L.i("RTSP: rozdzielczosc " + size.width + "x" + size.height);
-                        listener.onVideoSize(size.width, size.height);
-                    }
+            ArrayList<String> args = new ArrayList<>();
+            args.add("--no-audio"); // dzwiek idzie przez SIP
+            args.add("--network-caching=300");
+            args.add("--drop-late-frames");
+            args.add("--skip-frames");
+            if (tcp) args.add("--rtsp-tcp");
+            lib = new LibVLC(ctx, args);
+            player = new MediaPlayer(lib);
+            player.attachViews(view, null, false, true);
+            player.setVideoScale(MediaPlayer.ScaleType.SURFACE_BEST_FIT);
+            player.setEventListener(event -> {
+                if (stopped) return;
+                switch (event.type) {
+                    case MediaPlayer.Event.Vout:
+                        if (event.getVoutCount() > 0 && !gotFrame) {
+                            gotFrame = true;
+                            main.removeCallbacks(timeout);
+                            L.i("RTSP: obraz odebrany (" + mode + ")");
+                            status(null);
+                        }
+                        break;
+                    case MediaPlayer.Event.EncounteredError:
+                        fail("odtwarzacz nie mógł otworzyć strumienia (adres, hasło RTSP lub sieć)");
+                        break;
+                    case MediaPlayer.Event.EndReached:
+                        fail("strumień został zakończony przez bramofon");
+                        break;
+                    default:
+                        break;
                 }
             });
-            RtspMediaSource src = new RtspMediaSource.Factory()
-                    .setForceUseRtpTcp(tcp)
-                    .setTimeoutMs(6000)
-                    .createMediaSource(MediaItem.fromUri(Uri.parse(url)));
-            player.setMediaSource(src);
-            player.setPlayWhenReady(true);
-            player.prepare();
-            main.postDelayed(timeout, 10000);
+            Media media = new Media(lib, Uri.parse(url));
+            media.setHWDecoderEnabled(true, false);
+            media.addOption(":network-caching=300");
+            if (tcp) media.addOption(":rtsp-tcp");
+            player.setMedia(media);
+            media.release();
+            player.play();
+            main.postDelayed(timeout, 12000);
         } catch (Throwable t) {
             fail("nie udało się uruchomić odtwarzacza: " + t);
         }
     }
 
-    private void fail(String why) {
+    /** Zwalnianie odtwarzacza poza jego wlasnym wywolaniem zwrotnym. */
+    private void fail(final String why) {
         if (stopped) return;
-        L.i("RTSP: BLAD - " + why);
-        status("Brak obrazu z kamery:\n" + why);
         main.removeCallbacks(timeout);
-        release();
-        tcp = !tcp; // nastepna proba drugim sposobem transmisji
-        main.postDelayed(openRunnable, 2500);
+        main.post(() -> {
+            if (stopped) return;
+            L.i("RTSP: BLAD - " + why);
+            status("Brak obrazu z kamery:\n" + why);
+            release();
+            tcp = !tcp; // nastepna proba drugim sposobem transmisji
+            main.removeCallbacks(openRunnable);
+            main.postDelayed(openRunnable, 2500);
+        });
     }
 
     private void release() {
+        MediaPlayer p = player;
+        LibVLC l = lib;
+        player = null;
+        lib = null;
         try {
-            if (player != null) player.release();
+            if (p != null) {
+                p.setEventListener(null);
+                p.stop();
+                p.detachViews();
+                p.release();
+            }
+        } catch (Throwable t) {
+            L.e("RTSP: zwalnianie odtwarzacza", t);
+        }
+        try {
+            if (l != null) l.release();
         } catch (Throwable ignored) {
         }
-        player = null;
     }
 
     public void stop() {

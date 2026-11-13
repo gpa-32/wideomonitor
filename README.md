@@ -69,9 +69,9 @@ Lokalnie: Android Studio (JDK 17) → otwórz folder projektu → Build → Buil
 - `IntercomService` – usługa w tle: stan połączenia, watchdog, przywracanie poprzedniej aplikacji
 - `SipManager` – obsługa SIP (Linphone SDK)
 - `CallActivity` – ekran połączenia
-- `RtspPlayer` – podgląd RTSP (Media3)
+- `RtspPlayer` – podgląd RTSP (libVLC – ten sam silnik co odtwarzacz VLC)
 - `Gate` – otwieranie furtki przez HTTP (Basic/Digest)
 - `WebServer` + `assets/index.html` – panel www
 - `Cfg`, `L`, `Root`, `BootReceiver`, `App`, `MainActivity` – ustawienia, dziennik, root, autostart
 
-Biblioteka Linphone SDK jest na licencji GPLv3.
+Biblioteka Linphone SDK jest na licencji GPLv3, libVLC – LGPL.

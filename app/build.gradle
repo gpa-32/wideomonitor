@@ -61,7 +61,6 @@ android {
 
 dependencies {
     implementation 'org.linphone:linphone-sdk-android:5.3.60'
-    implementation 'androidx.media3:media3-exoplayer:1.4.1'
-    implementation 'androidx.media3:media3-exoplayer-rtsp:1.4.1'
+    implementation 'org.videolan.android:libvlc-all:3.6.0'
     implementation 'org.nanohttpd:nanohttpd:2.3.1'
 }
