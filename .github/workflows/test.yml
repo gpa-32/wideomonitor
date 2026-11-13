@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   emulator:
@@ -53,3 +53,12 @@ jobs:
         with:
           name: wyniki-testu
           path: ci-out
+
+      - name: Zapis wynikow w galezi test-results
+        if: always()
+        run: |
+          cd ci-out
+          git init -q -b test-results
+          git add -A
+          git -c user.name="github-actions" -c user.email="actions@users.noreply.github.com" commit -q -m "Wyniki testu ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" test-results
