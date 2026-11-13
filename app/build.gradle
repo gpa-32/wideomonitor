@@ -53,6 +53,13 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
+    packaging {
+        jniLibs {
+            // Linphone i libVLC dostarczaja te sama biblioteke standardowa C++
+            pickFirsts += ['**/libc++_shared.so']
+        }
+    }
+
     lint {
         abortOnError false
         checkReleaseBuilds false
