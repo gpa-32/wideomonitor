@@ -5,6 +5,23 @@ tabletu), na wierzchu pojawia się obraz z kamery z przyciskami **Odbierz**, **O
 **Odrzuć**. Po zakończeniu na ekran wraca aplikacja, która była otwarta wcześniej.
 Cała konfiguracja odbywa się przez przeglądarkę.
 
+## Telefon i tablet – jedna aplikacja
+
+Ten sam plik APK działa na tablecie i na telefonie. Na wąskim ekranie (telefon) układ jest pionowy,
+a panel www jest domyślnie wyłączony – całą konfigurację robi się z menu aplikacji:
+
+- **Ustawienia** – wszystkie opcje (SIP, kamera, furtka, dźwięk, zachowanie, panel www).
+- **Wgraj ustawienia kodem QR** – skanuje kod z innego urządzenia z tą aplikacją
+  (menu „Pokaż kod QR z ustawieniami” albo sekcja „Kod QR” w panelu www tabletu)
+  lub kod / link z panelu serwera Domofon SIP (pobiera konto SIP).
+- **Uprawnienia** – na urządzeniu bez root nadaje po kolei: mikrofon, powiadomienia,
+  wyświetlanie nad aplikacjami, pracę w tle bez oszczędzania baterii.
+- **Dziennik i diagnostyka** – dziennik zdarzeń i test połączenia z kamerą.
+
+Telefon poza siecią domową nie odbierze połączenia bezpośrednio po IP – potrzebna jest
+rejestracja na serwerze SIP dostępnym z internetu, a obraz RTSP i otwieranie furtki przez HTTP
+działają tylko, gdy telefon ma dostęp do sieci bramofonu (Wi-Fi w domu lub VPN).
+
 ## Instalacja
 
 1. Pobierz `wideodomofon.apk` z zakładki **Releases** repozytorium i zainstaluj na tablecie.
@@ -81,6 +98,7 @@ Lokalnie: Android Studio (JDK 17) → otwórz folder projektu → Build → Buil
 - `ServerLink`, `Provision` – pobieranie konta SIP z serwera Domofon SIP na podstawie linku
 - `Gate` – otwieranie furtki przez HTTP (Basic/Digest)
 - `WebServer` + `assets/index.html` – panel www
-- `Cfg`, `L`, `Root`, `BootReceiver`, `App`, `MainActivity` – ustawienia, dziennik, root, autostart
+- `MainActivity`, `SettingsActivity`, `LogActivity`, `Fields` – menu aplikacji, ustawienia, dziennik
+- `Cfg`, `L`, `Root`, `BootReceiver`, `App` – ustawienia (także eksport/import QR), dziennik, root, autostart
 
 Biblioteka Linphone SDK jest na licencji GPLv3, libVLC – LGPL.
