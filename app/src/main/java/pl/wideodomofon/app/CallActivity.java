@@ -12,7 +12,10 @@ import android.view.Gravity;
 import android.view.TextureView;
 import android.view.View;
 import android.view.WindowManager;
+import android.content.res.ColorStateList;
+import android.graphics.drawable.RippleDrawable;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -27,7 +30,8 @@ public class CallActivity extends Activity implements IntercomService.Ui {
     private FrameLayout root;
     private TextureView video;
     private VLCVideoLayout rtspView;
-    private TextView title, info, videoStatus, btnAnswer, btnOpen, btnHang, btnMute;
+    private TextView title, info, videoStatus;
+    private ImageView btnAnswer, btnOpen, btnHang, btnMute;
     private RtspPlayer rtsp;
     private SnapshotPlayer jpeg;
     private android.widget.ImageView jpegView;
@@ -127,20 +131,22 @@ public class CallActivity extends Activity implements IntercomService.Ui {
             info.setText("Podgląd kamery i próbne otwarcie furtki");
             btnAnswer.setVisibility(View.GONE);
             btnMute.setVisibility(View.GONE);
-            btnHang.setText("Zamknij");
+            setIcon(btnHang, R.drawable.ic_close, "Zamknij");
         } else if (st == IntercomService.RINGING) {
             title.setText("Ktoś dzwoni do furtki");
             info.setText(svc.caller);
             btnAnswer.setVisibility(View.VISIBLE);
             btnMute.setVisibility(View.GONE);
-            btnHang.setText("Odrzuć");
+            setIcon(btnHang, R.drawable.ic_call_end, "Odrzuć");
         } else if (st == IntercomService.IN_CALL) {
             title.setText("Rozmowa");
             info.setText(svc.caller);
             btnAnswer.setVisibility(View.GONE);
             btnMute.setVisibility(View.VISIBLE);
-            btnMute.setText(svc.isMicMuted() ? "Włącz mikrofon" : "Wycisz");
-            btnHang.setText("Rozłącz");
+            boolean muted = svc.isMicMuted();
+            setIcon(btnMute, muted ? R.drawable.ic_mic_off : R.drawable.ic_mic, muted ? "Włącz mikrofon" : "Wycisz mikrofon");
+            btnMute.setBackground(circle(muted ? 0xFFEF6C00 : 0xFF546E7A));
+            setIcon(btnHang, R.drawable.ic_call_end, "Rozłącz");
         }
     }
 
@@ -274,21 +280,36 @@ public class CallActivity extends Activity implements IntercomService.Ui {
         return Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v, getResources().getDisplayMetrics()));
     }
 
-    private TextView button(String text, int color, View.OnClickListener l) {
-        TextView b = new TextView(this);
-        b.setText(text);
-        b.setTextColor(Color.WHITE);
-        b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
-        b.setGravity(Gravity.CENTER);
-        b.setPadding(dp(12), dp(22), dp(12), dp(22));
+    /** Polprzezroczyste kolo z cienka jasna obwodka i efektem dotkniecia. */
+    private android.graphics.drawable.Drawable circle(int color) {
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(color);
-        bg.setCornerRadius(dp(16));
-        b.setBackground(bg);
+        bg.setShape(GradientDrawable.OVAL);
+        bg.setColor((color & 0x00FFFFFF) | 0x8C000000); // ok. 55% krycia - widac przez nie obraz
+        bg.setStroke(dp(2), 0x99FFFFFF);
+        GradientDrawable mask = new GradientDrawable();
+        mask.setShape(GradientDrawable.OVAL);
+        mask.setColor(Color.WHITE);
+        return new RippleDrawable(ColorStateList.valueOf(0x66FFFFFF), bg, mask);
+    }
+
+    private void setIcon(ImageView b, int icon, String description) {
+        b.setImageResource(icon);
+        b.setContentDescription(description);
+    }
+
+    /** Okragly przycisk ze znakiem zamiast tekstu. */
+    private ImageView button(int icon, String description, int color, View.OnClickListener l) {
+        ImageView b = new ImageView(this);
+        setIcon(b, icon, description);
+        b.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        int pad = dp(24);
+        b.setPadding(pad, pad, pad, pad);
+        b.setBackground(circle(color));
         b.setClickable(true);
+        b.setFocusable(true);
         b.setOnClickListener(l);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        lp.setMargins(dp(8), 0, dp(8), 0);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(104), dp(104));
+        lp.setMargins(dp(28), 0, dp(28), 0);
         b.setLayoutParams(lp);
         return b;
     }
@@ -323,7 +344,7 @@ public class CallActivity extends Activity implements IntercomService.Ui {
 
         LinearLayout top = new LinearLayout(this);
         top.setOrientation(LinearLayout.VERTICAL);
-        top.setBackgroundColor(0x99000000);
+        top.setBackgroundColor(0x55000000);
         top.setPadding(dp(20), dp(12), dp(20), dp(12));
         title = new TextView(this);
         title.setTextColor(Color.WHITE);
@@ -338,12 +359,12 @@ public class CallActivity extends Activity implements IntercomService.Ui {
 
         LinearLayout bar = new LinearLayout(this);
         bar.setOrientation(LinearLayout.HORIZONTAL);
-        bar.setBackgroundColor(0x99000000);
-        bar.setPadding(dp(12), dp(14), dp(12), dp(14));
-        btnAnswer = button("Odbierz", 0xFF2E7D32, v -> onAnswer());
-        btnOpen = button("Otwórz furtkę", 0xFF1565C0, v -> onOpen());
-        btnMute = button("Wycisz", 0xFF546E7A, v -> onMute());
-        btnHang = button("Odrzuć", 0xFFC62828, v -> onHang());
+        bar.setGravity(Gravity.CENTER_HORIZONTAL);
+        bar.setPadding(dp(12), dp(12), dp(12), dp(28)); // bez tla - przyciski leza bezposrednio na obrazie
+        btnAnswer = button(R.drawable.ic_call, "Odbierz", 0xFF2E7D32, v -> onAnswer());
+        btnOpen = button(R.drawable.ic_gate, "Otwórz furtkę", 0xFF1565C0, v -> onOpen());
+        btnMute = button(R.drawable.ic_mic, "Wycisz mikrofon", 0xFF546E7A, v -> onMute());
+        btnHang = button(R.drawable.ic_call_end, "Odrzuć", 0xFFC62828, v -> onHang());
         bar.addView(btnAnswer);
         bar.addView(btnOpen);
         bar.addView(btnMute);
