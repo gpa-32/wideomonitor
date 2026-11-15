@@ -48,6 +48,18 @@
     <pre id="diag" style="display:none;margin-top:12px"></pre>
   </section>
 
+  <section>
+    <h2>Połączenie z serwerem Domofon SIP</h2>
+    <div class="row"><label for="p_link">Link z panelu serwera</label>
+      <input type="text" id="p_link" autocomplete="off" placeholder="https://…/api/pair/…  albo  https://…/p/….xml">
+      <small>Link parowania z grupy („Rozpocznij parowanie” → „Kopiuj link”) albo link urządzenia („Kopiuj link” pod kodem QR). Tablet sam pobierze konto SIP.</small></div>
+    <div class="row"><label for="p_name">Nazwa tabletu</label>
+      <input type="text" id="p_name" autocomplete="off" maxlength="40" placeholder="np. Tablet kuchnia">
+      <small>Używana przy parowaniu – pod tą nazwą tablet pojawi się w panelu serwera.</small></div>
+    <div class="actions" style="margin-top:12px"><button class="ok" id="p_btn" onclick="provision()">Pobierz konfigurację</button></div>
+    <p id="p_msg" style="margin:12px 0 0;color:var(--muted)"></p>
+  </section>
+
   <form id="form" onsubmit="save(event)"></form>
 
   <section>
@@ -142,6 +154,17 @@ async function save(ev){
   }
   try { await post("/api/config",out); msg("Zapisano – ustawienia zastosowane"); }
   catch(e){ msg("Błąd zapisu: "+e.message); }
+}
+
+async function provision(){
+  const out=$("p_msg"), btn=$("p_btn");
+  btn.disabled=true; out.style.color="var(--muted)"; out.textContent="Łączę z serwerem…";
+  try {
+    const r = await post("/api/provision",{link:$("p_link").value.trim(),name:$("p_name").value.trim()});
+    out.textContent=r.message; out.style.color=r.ok?"var(--accent)":"var(--red)";
+    if(r.ok){ $("p_link").value=""; buildForm(await (await fetch("/api/config")).json()); setTimeout(refresh,3000); }
+  } catch(e){ out.style.color="var(--red)"; out.textContent="Błąd: "+e.message; }
+  btn.disabled=false;
 }
 
 async function act(name){

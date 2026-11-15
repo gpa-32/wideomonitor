@@ -29,6 +29,7 @@ WEB = "http://127.0.0.1:8080"
 HOST_FROM_EMU = "10.0.2.2"   # adres komputera-hosta widziany z emulatora
 SIP_LISTEN = 5070
 GATE_PORT = 9000
+PROV_PORT = 9100
 
 os.makedirs(OUT, exist_ok=True)
 results = []
@@ -141,6 +142,47 @@ class GateHandler(http.server.BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def log_message(self, *a):
+        pass
+
+
+# --------------------------------------------------------------------------- serwer Domofon SIP (parowanie)
+
+prov_hits = []
+
+
+class ProvHandler(http.server.BaseHTTPRequestHandler):
+    def _send(self, code, obj):
+        body = json.dumps(obj).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _account(self, user):
+        return {"sip": {"server": HOST_FROM_EMU, "port": 5099, "transport": "udp", "username": user,
+                        "password": "HasloZSerwera123", "realm": "asterisk", "display_name": "Tablet CI",
+                        "extension": user.split("-")[-1]}}
+
+    def do_POST(self):
+        n = int(self.headers.get("Content-Length", "0") or 0)
+        raw = self.rfile.read(n).decode("utf-8", "replace")
+        prov_hits.append(("POST", self.path, raw))
+        if self.path == "/api/pair/tokenparowania123":
+            acc = self._account("k9-201")
+            acc["group"] = {"number": "100", "name": "Wszystkie"}
+            self._send(200, acc)
+        else:
+            self._send(404, {"detail": "Not Found"})
+
+    def do_GET(self):
+        prov_hits.append(("GET", self.path, ""))
+        if self.path == "/p/tokenurzadzenia123.json":
+            self._send(200, self._account("k9-202"))
+        else:
+            self._send(404, {"detail": "Not Found"})
 
     def log_message(self, *a):
         pass
@@ -402,6 +444,54 @@ def test_web():
     log("status: " + json.dumps(st, ensure_ascii=False))
 
 
+def test_provision():
+    log("=== Konto z serwera Domofon SIP ===")
+    base = "http://%s:%d" % (HOST_FROM_EMU, PROV_PORT)
+
+    def prov(link, name="Tablet CI"):
+        code, body = api("/api/provision", body={"link": link, "name": name})
+        try:
+            return code, json.loads(body)
+        except Exception:  # noqa
+            return code, {"raw": body[:200]}
+
+    code, r = prov("to nie jest link")
+    check("Serwer: bledny link odrzucony z komunikatem", code == 200 and r.get("ok") is False and r.get("message"), str(r))
+    code, r = prov("http://example.com/api/pair/tokenparowania123")
+    check("Serwer: link http do adresu publicznego odrzucony", code == 200 and r.get("ok") is False and not prov_hits, str(r))
+    code, r = prov(base + "/api/pair/nieaktywnytoken999")
+    check("Serwer: nieaktywne parowanie -> czytelny komunikat", r.get("ok") is False and "Parowanie" in str(r.get("message")), str(r))
+    code, r = prov(base + "/api/pair/tokenparowania123")
+    check("Serwer: parowanie pobralo konto", r.get("ok") is True and "k9-201" in str(r.get("message")), str(r))
+    posts = [h for h in prov_hits if h[0] == "POST" and h[1].endswith("tokenparowania123")]
+    try:
+        sent = json.loads(posts[-1][2]) if posts else {}
+    except Exception:  # noqa
+        sent = {}
+    check("Serwer: tablet wyslal identyfikator i nazwe", str(sent.get("device_uid", "")).startswith("wd-")
+          and len(sent.get("device_uid", "")) >= 11 and sent.get("name") == "Tablet CI", json.dumps(sent))
+    _, body = api("/api/config")
+    try:
+        cfg = json.loads(body)
+    except Exception:  # noqa
+        cfg = {}
+    check("Serwer: konto zapisane w ustawieniach", cfg.get("sip_enabled") is True and cfg.get("sip_user") == "k9-201"
+          and cfg.get("sip_server") == "%s:5099" % HOST_FROM_EMU and cfg.get("sip_pass") == "HasloZSerwera123"
+          and cfg.get("sip_transport") == "udp",
+          json.dumps({k: cfg.get(k) for k in ("sip_enabled", "sip_user", "sip_server", "sip_transport")}))
+    code, r = prov(base + "/p/tokenurzadzenia123.xml")
+    _, body = api("/api/config")
+    check("Serwer: link urzadzenia (.xml) pobiera konto w JSON", r.get("ok") is True and '"k9-202"' in body
+          and ("GET", "/p/tokenurzadzenia123.json", "") in prov_hits, str(r))
+    time.sleep(4)
+    st = status()
+    check("Serwer: SIP probuje rejestracji po pobraniu konta", "bez rejestracji" not in str(st.get("sip")), str(st.get("sip")))
+    # powrot do pracy bez serwera - dalsze testy dzwonia bezposrednio po IP
+    code, _ = api("/api/config", body={"sip_enabled": False, "sip_server": "", "sip_user": "", "sip_pass": ""})
+    check("Serwer: wylaczenie rejestracji", code == 200)
+    time.sleep(6)
+
+
 def test_rtsp():
     log("=== Podglad RTSP na ekranie testowym ===")
     code, body = api("/api/config", body={"video_source": "rtsp", "rtsp_tcp": True,
@@ -535,9 +625,11 @@ def main():
 
     srv = http.server.ThreadingHTTPServer(("0.0.0.0", GATE_PORT), GateHandler)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
+    psrv = http.server.ThreadingHTTPServer(("0.0.0.0", PROV_PORT), ProvHandler)
+    threading.Thread(target=psrv.serve_forever, daemon=True).start()
     door = Doorphone()
 
-    steps = [test_start, test_web, test_rtsp, lambda: test_reject(door), lambda: test_answer(door),
+    steps = [test_start, test_web, test_provision, test_rtsp, lambda: test_reject(door), lambda: test_answer(door),
              lambda: test_gate(door), lambda: test_caller_hangup(door), lambda: test_recovery(door)]
     for s in steps:
         try:

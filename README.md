@@ -24,6 +24,14 @@ Port SIP tabletu to domyślnie 5060.
 
 **Przez serwer SIP** – w panelu aplikacji włącz „Rejestracja na serwerze SIP" i podaj dane konta.
 
+**Przez serwer Domofon SIP (konto pobierane automatycznie)** – w panelu aplikacji, w sekcji
+„Połączenie z serwerem Domofon SIP", wklej link skopiowany z panelu serwera i kliknij „Pobierz konfigurację":
+- *link parowania* (grupa → „Rozpocznij parowanie" → „Kopiuj link parowania") – tablet sam zakłada sobie konto
+  i dołącza do grupy dzwonienia; ten sam link działa na kolejnych tabletach przez 30 minut,
+- *link urządzenia* (urządzenie → „Kopiuj link" pod kodem QR) – dla tabletu dodanego wcześniej ręcznie.
+
+Link musi zaczynać się od `https://` (wyjątek: serwer w sieci lokalnej pod adresem IP).
+
 **Obraz** – dwie możliwości:
 - *Wideo w połączeniu SIP* – obraz przychodzi w ramach połączenia (kodek H.264 włączony w bramofonie).
 - *Strumień RTSP* – `rtsp://IP_BRAMOFONU/live/ch00_0` (Intercom → RTSP → włącz serwer RTSP).
@@ -70,6 +78,7 @@ Lokalnie: Android Studio (JDK 17) → otwórz folder projektu → Build → Buil
 - `SipManager` – obsługa SIP (Linphone SDK)
 - `CallActivity` – ekran połączenia
 - `RtspPlayer` – podgląd RTSP (libVLC – ten sam silnik co odtwarzacz VLC)
+- `ServerLink`, `Provision` – pobieranie konta SIP z serwera Domofon SIP na podstawie linku
 - `Gate` – otwieranie furtki przez HTTP (Basic/Digest)
 - `WebServer` + `assets/index.html` – panel www
 - `Cfg`, `L`, `Root`, `BootReceiver`, `App`, `MainActivity` – ustawienia, dziennik, root, autostart

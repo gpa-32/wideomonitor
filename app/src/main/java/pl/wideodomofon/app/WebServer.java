@@ -68,6 +68,20 @@ public class WebServer extends NanoHTTPD {
                     svc.applyConfig();
                     return json(new JSONObject().put("ok", true));
                 }
+                if ("/api/provision".equals(uri)) {
+                    JSONObject in = new JSONObject(body == null ? "{}" : body);
+                    JSONObject out = new JSONObject();
+                    try {
+                        out.put("message", Provision.apply(svc, in.optString("link"), in.optString("name")));
+                        out.put("ok", true);
+                        svc.applyConfig();
+                    } catch (ServerLink.LinkException e) {
+                        L.i("Serwer: " + e.getMessage());
+                        out.put("ok", false);
+                        out.put("message", e.getMessage());
+                    }
+                    return json(out);
+                }
                 if ("/api/action".equals(uri)) {
                     String name = new JSONObject(body == null ? "{}" : body).optString("name");
                     switch (name) {
