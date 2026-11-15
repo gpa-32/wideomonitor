@@ -302,14 +302,16 @@ public class CallActivity extends Activity implements IntercomService.Ui {
         ImageView b = new ImageView(this);
         setIcon(b, icon, description);
         b.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        int pad = dp(24);
+        boolean phone = Cfg.isPhone(this);
+        int pad = dp(phone ? 18 : 24);
         b.setPadding(pad, pad, pad, pad);
         b.setBackground(circle(color));
         b.setClickable(true);
         b.setFocusable(true);
         b.setOnClickListener(l);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(104), dp(104));
-        lp.setMargins(dp(28), 0, dp(28), 0);
+        int size = dp(phone ? 72 : 104);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(size, size);
+        lp.setMargins(dp(phone ? 12 : 28), 0, dp(phone ? 12 : 28), 0);
         b.setLayoutParams(lp);
         return b;
     }
@@ -335,7 +337,7 @@ public class CallActivity extends Activity implements IntercomService.Ui {
 
         videoStatus = new TextView(this);
         videoStatus.setTextColor(0xFFFFD54F);
-        videoStatus.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
+        videoStatus.setTextSize(TypedValue.COMPLEX_UNIT_SP, Cfg.isPhone(this) ? 15 : 20);
         videoStatus.setGravity(Gravity.CENTER);
         videoStatus.setPadding(dp(24), dp(24), dp(24), dp(24));
         videoStatus.setVisibility(View.GONE);
@@ -348,10 +350,10 @@ public class CallActivity extends Activity implements IntercomService.Ui {
         top.setPadding(dp(20), dp(12), dp(20), dp(12));
         title = new TextView(this);
         title.setTextColor(Color.WHITE);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 26);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, Cfg.isPhone(this) ? 20 : 26);
         info = new TextView(this);
         info.setTextColor(0xFFDDDDDD);
-        info.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        info.setTextSize(TypedValue.COMPLEX_UNIT_SP, Cfg.isPhone(this) ? 15 : 18);
         top.addView(title);
         top.addView(info);
         root.addView(top, new FrameLayout.LayoutParams(

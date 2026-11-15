@@ -591,6 +591,57 @@ def test_caller_hangup(door):
     back_to_previous("Rezygnacja")
 
 
+def test_menu():
+    log("=== Menu aplikacji i kod QR ===")
+    code, body = api("/api/qr.png")
+    check("QR: panel zwraca obraz PNG z ustawieniami", code == 200 and "PNG" in body[:12], "kod %s, %d znakow" % (code, len(body)))
+    for act, shot in ((".SettingsActivity", "08-menu-ustawienia"), (".LogActivity", "08b-menu-dziennik"), (".MainActivity", "08c-menu-glowne")):
+        shell("am start -n %s/%s" % (PKG, act))
+        ok = wait_for(lambda: (PKG + "/" + act) in resumed(), 15)
+        check("Menu: ekran %s otwiera sie" % act, ok, resumed())
+        time.sleep(2)
+        screenshot(shot)
+        shell("input keyevent 4")
+        time.sleep(1)
+    pid = shell("pidof " + PKG).strip()
+    check("Menu: aplikacja dziala po przejsciu ekranow", pid.isdigit(), "pid=" + pid)
+
+
+def test_phone(door):
+    log("=== Uklad telefonu (waski, pionowy ekran) ===")
+    shell("wm size 1080x2340")
+    shell("wm density 440")
+    time.sleep(4)
+    try:
+        shell("am start -n %s/.MainActivity" % PKG)
+        check("Telefon: ekran glowny otwarty", wait_for(lambda: (PKG + "/.MainActivity") in resumed(), 15), resumed())
+        time.sleep(2)
+        screenshot("09-telefon-menu")
+        shell("am start -n %s/.SettingsActivity" % PKG)
+        time.sleep(3)
+        screenshot("09b-telefon-ustawienia")
+        shell("input keyevent 4")
+        time.sleep(1)
+        d = ring(door, "Telefon")
+        time.sleep(3)
+        screenshot("10-telefon-dzwoni")
+        api("/api/action", body={"name": "answer"})
+        r = door.wait(d, "final", 10)
+        check("Telefon: polaczenie odebrane", r == 200, "kod SIP: %s" % r)
+        time.sleep(3)
+        screenshot("11-telefon-rozmowa")
+        api("/api/action", body={"name": "hangup"})
+        r = door.wait(d, "bye", 10)
+        check("Telefon: rozlaczenie", r is True, str(r))
+        if r is not True:
+            door.bye(d)
+        back_to_previous("Telefon")
+    finally:
+        shell("wm size reset")
+        shell("wm density reset")
+        time.sleep(4)
+
+
 def test_recovery(door):
     log("=== Odpornosc: nagle ubicie procesu ===")
     pid = shell("pidof " + PKG).strip()
@@ -630,7 +681,7 @@ def main():
     door = Doorphone()
 
     steps = [test_start, test_web, test_provision, test_rtsp, lambda: test_reject(door), lambda: test_answer(door),
-             lambda: test_gate(door), lambda: test_caller_hangup(door), lambda: test_recovery(door)]
+             lambda: test_gate(door), lambda: test_caller_hangup(door), test_menu, lambda: test_phone(door), lambda: test_recovery(door)]
     for s in steps:
         try:
             s()

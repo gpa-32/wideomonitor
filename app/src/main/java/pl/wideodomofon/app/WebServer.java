@@ -49,6 +49,21 @@ public class WebServer extends NanoHTTPD {
                 if ("/api/diag".equals(uri)) {
                     return newFixedLengthResponse(Response.Status.OK, "text/plain; charset=utf-8", Diag.camera());
                 }
+                if ("/api/qr.png".equals(uri)) {
+                    java.util.Map<com.google.zxing.EncodeHintType, Object> hints =
+                            new java.util.EnumMap<>(com.google.zxing.EncodeHintType.class);
+                    hints.put(com.google.zxing.EncodeHintType.CHARACTER_SET, "UTF-8");
+                    hints.put(com.google.zxing.EncodeHintType.MARGIN, 2);
+                    android.graphics.Bitmap bmp = new com.journeyapps.barcodescanner.BarcodeEncoder().encodeBitmap(
+                            Cfg.exportQr(), com.google.zxing.BarcodeFormat.QR_CODE, 640, 640, hints);
+                    ByteArrayOutputStream png = new ByteArrayOutputStream();
+                    bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, png);
+                    byte[] bytes = png.toByteArray();
+                    Response r = newFixedLengthResponse(Response.Status.OK, "image/png",
+                            new java.io.ByteArrayInputStream(bytes), bytes.length);
+                    r.addHeader("Cache-Control", "no-store");
+                    return r;
+                }
                 if ("/api/log".equals(uri)) {
                     return newFixedLengthResponse(Response.Status.OK, "text/plain; charset=utf-8", L.dump());
                 }

@@ -54,6 +54,7 @@ public final class Cfg {
             d.put("screen_off_after", true);
             d.put("nightly_restart_hour", -1);  // 0-23, -1 = wylaczony
             // Panel www
+            d.put("web_enabled", true);         // na telefonie domyslnie wylaczony
             d.put("web_port", 8080);
             d.put("web_pass", "");
         } catch (Exception ignored) {
@@ -68,6 +69,11 @@ public final class Cfg {
         try {
             JSONObject saved = new JSONObject(prefs.getString("json", "{}"));
             merge(saved);
+            if (!saved.has("web_enabled")) {
+                // Pierwsze uruchomienie: na telefonie konfiguracja odbywa sie z menu, panel www jest wylaczony.
+                data.put("web_enabled", !isPhone(c));
+                save();
+            }
         } catch (Exception ignored) {
         }
         if (data.optString("web_pass", "").isEmpty()) {
@@ -122,6 +128,48 @@ public final class Cfg {
             }
         }
         save();
+    }
+
+    public static final String QR_PREFIX = "WD1:";
+    /** Ustawienia zwiazane z konkretnym urzadzeniem - nie przenosimy ich kodem QR. */
+    private static final String[] QR_SKIP = {"web_enabled", "web_port", "web_pass"};
+
+    public static boolean isPhone(Context c) {
+        return c.getResources().getConfiguration().smallestScreenWidthDp < 600;
+    }
+
+    /** Tresc kodu QR: tylko ustawienia rozne od domyslnych. */
+    public static synchronized String exportQr() throws Exception {
+        JSONObject def = defaults();
+        JSONObject out = new JSONObject();
+        Iterator<String> it = def.keys();
+        while (it.hasNext()) {
+            String k = it.next();
+            boolean skip = false;
+            for (String s : QR_SKIP) if (s.equals(k)) skip = true;
+            if (skip) continue;
+            if (!String.valueOf(def.opt(k)).equals(String.valueOf(data.opt(k)))) out.put(k, data.opt(k));
+        }
+        return QR_PREFIX + out.toString();
+    }
+
+    /** Wgrywa ustawienia z kodu QR; pozycje nieobecne w kodzie wracaja do wartosci domyslnych. Zwraca liczbe pozycji. */
+    public static synchronized int importQr(String text) throws Exception {
+        if (text == null || !text.startsWith(QR_PREFIX)) throw new Exception("to nie jest kod ustawień");
+        JSONObject in = new JSONObject(text.substring(QR_PREFIX.length()));
+        JSONObject full = defaults();
+        for (String s : QR_SKIP) full.remove(s);
+        int n = 0;
+        Iterator<String> it = in.keys();
+        while (it.hasNext()) {
+            String k = it.next();
+            if (full.has(k)) {
+                full.put(k, in.opt(k));
+                n++;
+            }
+        }
+        update(full);
+        return n;
     }
 
     public static synchronized JSONObject all() {

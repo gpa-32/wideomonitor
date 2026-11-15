@@ -63,6 +63,13 @@
   <form id="form" onsubmit="save(event)"></form>
 
   <section>
+    <h2>Kod QR dla telefonu lub drugiego tabletu</h2>
+    <p style="color:var(--muted);margin:0 0 10px">Przenosi zapisane ustawienia (SIP, kamera, furtka, dźwięk). Na drugim urządzeniu wybierz w menu aplikacji „Wgraj ustawienia kodem QR”. Kod zawiera hasła – nie udostępniaj go.</p>
+    <div class="actions"><button onclick="showQr()">Pokaż kod QR</button></div>
+    <img id="qr" alt="Kod QR z ustawieniami" style="display:none;margin-top:12px;max-width:320px;width:100%;border-radius:8px;background:#fff">
+  </section>
+
+  <section>
     <h2>Dziennik zdarzeń</h2>
     <pre id="log">…</pre>
   </section>
@@ -112,6 +119,7 @@ const GROUPS = [
     ["nightly_restart_hour","number","Nocny restart aplikacji o godzinie","0–23, -1 = wyłączony."]
   ]],
   ["Panel www", [
+    ["web_enabled","bool","Panel www włączony","Po wyłączeniu konfiguracja jest możliwa tylko z menu aplikacji na urządzeniu."],
     ["web_port","number","Port panelu","Po zmianie panel będzie dostępny pod nowym portem."],
     ["web_pass","text","Hasło panelu (login: admin)",""]
   ]]
@@ -175,6 +183,11 @@ async function act(name){
 async function diag(){
   const d=$("diag"); d.style.display="block"; d.textContent="Sprawdzam połączenie tabletu z kamerą… (do 30 s)";
   try { d.textContent=await (await fetch("/api/diag")).text(); } catch(e){ d.textContent="Błąd: "+e.message; }
+}
+async function showQr(){
+  try { const r=await fetch("/api/qr.png"); if(!r.ok) throw new Error(await r.text());
+    const img=$("qr"); img.src=URL.createObjectURL(await r.blob()); img.style.display="block"; }
+  catch(e){ msg("Błąd: "+e.message); }
 }
 function dur(s){ const d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60); return (d?d+" d ":"")+h+" h "+m+" min"; }
 async function refresh(){

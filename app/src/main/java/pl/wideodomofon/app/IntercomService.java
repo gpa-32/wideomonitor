@@ -160,7 +160,7 @@ public class IntercomService extends Service implements SipManager.Events {
             tick++;
             try {
                 if (tick % 2 == 0) writeBeat();
-                if (web == null || !web.isAlive()) {
+                if (Cfg.b("web_enabled") && (web == null || !web.isAlive())) {
                     L.i("Watchdog: serwer www nie dziala - uruchamiam ponownie");
                     startWeb();
                 }
@@ -300,6 +300,11 @@ public class IntercomService extends Service implements SipManager.Events {
         } catch (Throwable ignored) {
         }
         web = null;
+        if (!Cfg.b("web_enabled")) {
+            webPort = 0;
+            L.i("Panel www: wylaczony (konfiguracja z menu aplikacji)");
+            return;
+        }
         int port = Cfg.i("web_port");
         if (port < 1024 || port > 65535) port = 8080;
         try {
@@ -319,7 +324,8 @@ public class IntercomService extends Service implements SipManager.Events {
             L.i("Zapisano nowe ustawienia");
             if (state == IDLE) sip.restart();
             else L.i("Trwa rozmowa - ustawienia SIP zostana zastosowane po restarcie SIP");
-            if (Cfg.i("web_port") != webPort) startWeb();
+            boolean want = Cfg.b("web_enabled");
+            if (want != (web != null) || (want && Cfg.i("web_port") != webPort)) startWeb();
         }, 500);
     }
 
